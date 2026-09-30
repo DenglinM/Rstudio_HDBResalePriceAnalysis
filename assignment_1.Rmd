@@ -1,0 +1,474 @@
+---
+title: "Assignment 1"
+author: "Li Yuanhao"
+date: "2026-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+# Part 1 - Investigation on Singapore Resale Price of HDB Flats
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(tidyr)
+library(ggthemes)
+library(scales)
+library(lubridate)
+library(ggrepel)
+library(ggridges)
+library(forcats)
+library(stringr)
+library(ggtext)
+```
+
+First, load the dataset of Resale Flats:
+
+```{r}
+Resale_Price_2017 <- read_csv("data/ResaleFlatPrices/Resale flat prices based on registration date from Jan-2017 onwards.csv")
+```
+
+## Understanding the dataset
+
+Let's have a quick check about the dataset:
+
+```{r}
+head(Resale_Price_2017)
+```
+
+The news said, "...the total number of million-dollar HDB flats to 261 for the whole of 2021, more than three times the 82 such flats in 2020."
+
+So, exactly how many HDB flats were "million-dollar" flats in 2020?
+
+To get the month as a double number:
+
+```{r}
+Resale_Price_2017 %>%
+  mutate(month_dbl = as.numeric(str_remove(Resale_Price_2017$month, '-'))) %>%
+  select(month, month_dbl, everything()) -> Resale_Price_2017
+```
+
+And then select the HDB flats sold in 2020 & 2021 & 2025 which are more than $1m:
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202001 &month_dbl <= 202012) %>%
+  filter(resale_price >= 1000000) -> Resale_Price_2020
+'1m_flat_2020' <- nrow(Resale_Price_2020)
+```
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202101 &month_dbl <= 202112) %>%
+  filter(resale_price >= 1000000) -> Resale_Price_2021
+'1m_flat_2021' <- nrow(Resale_Price_2021)
+```
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202501 &month_dbl <= 202512) %>%
+  filter(resale_price >= 1000000) -> Resale_Price_2025
+length(Resale_Price_2025$resale_price)
+```
+Based on the data above, the number of HDB flats sold above $1 million was 82 in 2020, 259 in 2021, and 1,593 in 2025. This indicates a significant increase in the number of high-priced HDB flats.
+
+Now calculate the growth rate between average price of 2020 & 2021:
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl == 202512) %>%
+  summarise(average_price = mean(resale_price)) %>%
+  pull(average_price) -> mean_2025_Dec
+Resale_Price_2017 %>%
+  filter(month_dbl == 202511) %>%
+  summarise(average_price = mean(resale_price)) %>%
+  pull(average_price) -> mean_2025_Nov
+growth_rate_1month <- (mean_2025_Dec - mean_2025_Nov) / mean_2025_Nov
+cat("The growth rate of HDB resale transaction prices from Nov. to Dec. 2025 is:", round(growth_rate_1month * 100, 2), "%\n")
+```
+
+Next, let's compare the resale prices of HDB flats between December 2025 and December 2024:
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl == 202412) %>%
+  summarise(average_price = mean(resale_price)) %>%
+  pull(average_price) -> mean_2024_Dec
+growth_rate_1year <- (mean_2025_Dec - mean_2024_Dec) / mean_2024_Dec
+cat("The growth rate of HDB resale transaction prices from Dec. 2024 to Dec. 2025 is:", round(growth_rate_1year * 100, 2), "%\n")
+```
+
+Then, how many flats are sold in Dec. 2025:
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl == 202512) %>%
+  nrow()
+```
+
+The number of HDB transactions in December 2025 was 2,024.
+
+## Visualize the dataset.
+
+So, what is the monthly volume of HDB transactions in 2025?
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202412 & month_dbl <= 202512) %>%
+  group_by(month) %>%
+  summarise(
+    total_sales = n(),
+    avg_price = mean(resale_price)
+  ) %>%
+  arrange(month) %>%
+  mutate(
+    m_num = as.numeric(substr(month, 6, 7)),
+    y_num = substr(month, 3, 4),
+    month_eng = paste(month.abb[m_num], y_num, sep = ' '),
+    month_eng = factor(month_eng, levels = month_eng)
+  ) %>%
+  ggplot(mapping = aes(x = month_eng, y = total_sales, fill = avg_price)) +
+  geom_col(width = 0.7) +
+  scale_fill_gradient(low = "#97d8c4", high = "#4059ad") +
+  theme_pander(
+    bc = '#F5F5F5',
+    pc = '#F5F5F5'
+    ) +
+  labs(
+    title = paste("HDB resale volume",
+                "in 2025", sep="\n"),
+    caption = paste(
+      "Data: HDB (2026)"
+      ),
+    x = NULL,
+    y = 'Count of HDB Flats',
+    fill = "Resale Price") +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0, face = "bold", size = 14),
+        plot.caption = element_text(hjust=1, colour="grey40"),
+        plot.margin = margin(t = 1, r = 2, b = 1, l = 2, unit = "pt"))
+```
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202312 & month_dbl <= 202512) %>%
+  group_by(month) %>%
+  summarise(avg_price = mean(resale_price)) %>%
+  mutate(month_date = ym(month)) %>%
+  arrange(month_date) %>%
+  mutate(growth_rate = (avg_price - lag(avg_price)) / lag(avg_price)) %>%
+  mutate(growth_status = ifelse(growth_rate > 0, 'Increase', 'Decrease')) %>%
+  filter(month >= '2024-01') %>%
+  ggplot(mapping = aes(x = month_date, y = avg_price, group = 1)) +
+  geom_line(colour = 'grey70', size = 0.5) +
+  geom_point(mapping = aes(color = growth_status), size = 3) +
+  scale_color_manual(
+    values = c("Increase" = "#548686", "Decrease" = "#b35e5e")
+  ) +
+  theme_pander(
+    bc = '#F5F5F5',
+    pc = '#F5F5F5'
+    ) +
+  scale_x_date(
+    date_labels = '%m/%y', 
+    date_breaks = '1 month',
+    expand = expansion(add = 15)
+    ) +
+  labs(
+    title = paste("Change in average HDB resale prices",
+                "from January 2024 to December 2025", sep="\n"),
+    caption = paste(
+      "Data: HDB (2026)"
+      ),
+    x = NULL,
+    y = 'Average Price',
+    color = 'Price Trend') +
+  theme(plot.title = element_text(hjust = 0, face = "bold", size = 14),
+        plot.caption = element_text(hjust=1, colour="grey40"),
+        plot.margin = margin(t = 1, r = 2, b = 1, l = 2, unit = "pt"),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+        )
+```
+
+```{r}
+mature_towns <- c("ANG MO KIO", "BEDOK", "BISHAN", "BUKIT MERAH", 
+                  "BUKIT TIMAH", "CENTRAL AREA", "CLEMENTI", "GEYLANG", 
+                  "KALLANG/WHAMPOA", "MARINE PARADE", "PASIR RIS", 
+                  "QUEENSTOWN", "SERANGOON", "TAMPINES", "TOA PAYOH")
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202501 & month_dbl <= 202512) %>%
+  filter(flat_type == '4 ROOM') %>%
+  mutate(
+    lease_years = as.numeric(substr(remaining_lease, 1, 2)),
+    estate_type = ifelse(town %in% mature_towns, 'Mature Estate', 'Non-Mature Estate')
+    ) %>%
+  filter(!is.na(lease_years)) %>%
+  ggplot(mapping = aes(x = lease_years, y = resale_price, colour = estate_type, fill = estate_type)) +
+  geom_jitter(
+    mapping = aes(color = estate_type), 
+    alpha = 0.2, 
+    size = 1.2, 
+    width = 0.5
+    ) +
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, bs = 'cs'),
+              size = 1, alpha = 0.3) +
+  scale_color_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
+  scale_fill_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
+  scale_x_continuous(breaks = seq(40, 100, by = 5)) +
+  scale_y_continuous(labels = label_dollar(prefix = 'S$')) +
+  theme_pander(
+    bc = '#F5F5F5',
+    pc = '#F5F5F5'
+  ) +
+  labs(
+    title = paste("Lease Decay Effect Controlled by Spatial Location",
+                  "4-Room HDB Resale Prices (2025)", sep = "\n"),
+    subtitle = "Separating mature and non-mature estates reveals the true price depreciation curve",
+    caption = "Data: HDB (2026)",
+    x = "Remaining Lease (Years)",
+    y = 'Resale Price',
+    color ='Estate Type',
+    fill = 'Estate Type'
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0, face = 'bold', size = 14),
+    plot.subtitle = element_text(hjust = 0, colour = 'grey30', size = 10),
+    plot.caption = element_text(hjust = 1, colour = 'grey40'),
+    legend.position = 'bottom',
+    plot.margin = margin(t = 1, r = 2, b = 1, l = 2, unit = 'pt')
+  )
+```
+
+
+
+```{r}
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202401 & month_dbl <= 202412) %>%
+  group_by(town) %>%
+  summarise(price_24 = mean(resale_price)) -> df_24
+
+Resale_Price_2017 %>%
+  filter(month_dbl >= 202501 & month_dbl <= 202512) %>%
+  group_by(town) %>%
+  summarise(
+    price_25 = mean(resale_price),
+    volume_25 = n()
+    ) -> df_25
+
+df_24_25 <- inner_join(df_24, df_25, by = 'town') %>%
+  mutate(
+    growth_rate = (price_25 - price_24) / price_24,
+    estate_type = ifelse(town %in% mature_towns, 'Mature Estate', 'Non-Mature Estate')
+  )
+
+global_avg_price <- mean(df_24_25$price_25)
+global_avg_growth <- mean(df_24_25$growth_rate)
+
+ggplot(data = df_24_25, mapping = aes(x = price_25, y = growth_rate)) +
+  geom_vline(
+    xintercept = global_avg_price,
+    linetype = 'dashed',
+    color = 'grey75',
+    size = 0.6
+  ) +
+  geom_hline(
+    yintercept = global_avg_growth,
+    linetype = 'dashed',
+    color = 'grey75',
+    size = 0.6
+  ) +
+  geom_point(
+    aes(size = volume_25, fill = estate_type),
+    colour = 'white',
+    shape = 21,
+    alpha = 0.75,
+    stroke = 1
+  ) +
+  geom_text_repel(
+    aes(label = town, color = estate_type),
+    size = 3.2, 
+    point.padding = 0.4,
+    box.padding = 0.5, 
+    #== Create Curved Segment (like NY Times?) ==
+    segment.curvature = -0.2,
+    segment.angle = 90,
+    #============================================
+    segment.color = 'grey70',
+    segment.size = 0.6,
+    min.segment.length = 0,
+    max.overlaps = 50, 
+    show.legend = F
+  ) +
+  scale_fill_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
+  scale_color_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
+  scale_size_continuous(range = c(2.5, 11), guide = 'none') +
+  scale_x_continuous(labels = label_dollar(prefix = 'S$')) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  theme_pander(
+    bc = '#F5F5F5',
+    pc = '#F5F5F5'
+  ) +
+  labs(
+    title = paste("Market Momentum & Spatial Divergence Across HDB Towns"),
+    subtitle = "Size of bubble represents 2025 transaction volume. Dashed lines indicate national averages.",
+    caption = "Data: HDB (2026)",
+    x = 'Average Resale Price (2025)',
+    y = 'Year-over-Year Growth Rate (24-25)',
+    fill = 'Estate Type'
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0, face = 'bold', size = 14),
+    plot.subtitle = element_text(hjust = 0, colour = 'grey30', size = 10),
+    plot.caption = element_text(hjust = 1, colour = 'grey40'),
+    legend.position = 'bottom',
+    plot.margin = margin(t = 1, r = 2, b = 1, l = 2, unit = 'pt')
+  )
+```
+
+# Try to reproduce the chart.
+
+```{r fig.height=10, fig.width=8}
+df_ridges <- Resale_Price_2017 %>%
+  filter(month_dbl >= 202601 & month_dbl <= 202612) %>%
+  filter(flat_type == '4 ROOM') %>%
+  mutate(
+    price_per_sqm = resale_price / floor_area_sqm,
+    town_label = str_to_title(town),
+    town_label = str_replace(town_label, 'Kallang/whampoa', 'Kallang/Whampoa'),
+    town_label = fct_reorder(town_label, price_per_sqm, median) %>% fct_rev()
+  )
+
+ggplot(data = df_ridges, aes(x = price_per_sqm, y = town_label, fill = after_stat(x))) +
+  geom_density_ridges_gradient(
+    scale = 2.5,
+    rel_min_height = 0.01,
+    colour = 'white',
+    linewidth = 0.6
+  ) +
+  scale_fill_viridis_c(option = 'plasma') +
+  scale_x_continuous(
+    breaks = c(4000, 8000, 12000, 16000),
+    limits = c(3000, 17000)
+  ) +
+  labs(
+    title = 'HDB resale prices (4 room) in 2026 by neighbourhood',
+    subtitle = 'Neighbourhoods exhibit large differences',
+    x = 'Price per square metre ($)',
+    y = NULL,
+    caption = 'Data: Housing and Development Board, Singapore, 2026.'
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = 'none',
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(size = 9, color = 'grey20'),
+    axis.text.x = element_text(size = 10, color = 'black'),
+    plot.title = element_text(size = 15, face = 'bold', margin = margin(b = 5)),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 15)),
+    plot.caption = element_text(hjust = 1, color = 'black', size = 9),
+    plot.margin = margin(t = 15, r = 20, b = 15, l = 10)
+  )
+ggsave("HDB_ridgeline_plot.png", width = 8, height = 12, dpi = 300)
+```
+
+```{r}
+df_compare_base <- Resale_Price_2017 %>%
+  mutate(year = floor(month_dbl / 100)) %>%
+  filter(year %in% c(2021,2026), flat_type == '4 ROOM') %>%
+  mutate(
+    price_per_sqm = resale_price / floor_area_sqm,
+    town_label = str_to_title(town),
+    town_label = str_replace(town_label, 'Kallang/whampoa', 'Kallang/Whampoa'),
+    year_fct = as.factor(year)
+  )
+
+df_dumbbell <- df_compare_base %>%
+  group_by(town_label, year_fct) %>%
+  summarise(mean_price = mean(price_per_sqm), .groups = 'drop') %>%
+  pivot_wider(names_from = year_fct, values_from = mean_price, names_prefix = 'yr_') %>%
+  mutate(town_label = fct_reorder(town_label, yr_2021) %>% fct_rev())
+
+df_compare_base$town_label <- factor(df_compare_base$town_label,
+                                     levels = levels(df_dumbbell$town_label))
+
+color_2021 <- "#7CB5EC"
+color_2026 <- "#1F77B4"
+```
+
+```{r fig.height=10, fig.width=8}
+ggplot(df_dumbbell) +
+  geom_segment(
+    aes(x = yr_2021, xend = yr_2026, y = town_label, yend = town_label), 
+    color = 'grey60', 
+    size = 0.8
+    ) +
+  geom_point(aes(x = yr_2021, y = town_label, color = '2021'), size = 2) +
+  geom_point(aes(x = yr_2026, y = town_label, color = '2026'), size = 2) +
+  scale_color_manual(name = 'year', 
+                     values = c('2021' = color_2021, '2026' = color_2026)) +
+  scale_x_continuous(
+    breaks = seq(0, 12000, by = 3000),
+    limits = c(0, 13000)
+  ) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = paste0('Comparison of HDB resale prices (4 room) between ',
+                   '2021 and ',
+                   '2026'),
+    subtitle = 'Analysis by neighbourhood',
+    x = 'Price per square metre ($)',
+    y = NULL,
+    caption = 'Data: Housing and Development Board, Singapore, 2026.'
+  ) +
+  theme(
+    plot.title = element_markdown(size = 14, face = 'bold'),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(color = "gray20", size = 9),
+    plot.margin = margin(10, 20, 10, 10)
+  )
+```
+
+```{r fig.height=10, fig.width=8}
+ggplot(
+  df_compare_base, 
+  aes(x = price_per_sqm, y = town_label, color = year_fct)
+  ) +
+  geom_density_ridges(
+    fill = 'transparent', 
+    scale = 1.5,       
+    size = 0.6,        
+    rel_min_height = 0,
+    adjust = 1.3
+  ) +
+  scale_color_manual(values = c('2021' = color_2021, '2026' = color_2026)) +
+  scale_x_continuous(breaks = c(4000, 8000, 12000, 16000), limits = c(2000, 16500)) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = paste0('Comparison of HDB resale prices (4 room) between ',
+                   '2021 and ',
+                   '2026'),
+    subtitle = 'Analysis by neighbourhood',
+    x = 'Price per square metre ($)',
+    y = NULL,
+    caption = 'Data: Housing and Development Board, Singapore, 2026.'
+  ) +
+  theme(
+    legend.position = 'none',
+    plot.title = element_markdown(size = 14, face = 'bold'),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(color = "gray20", size = 9),
+    plot.margin = margin(10, 20, 10, 10)
+  )
+```
+
+# Some data I am intrested to:
+
+
+
