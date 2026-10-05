@@ -1,8 +1,9 @@
 ---
-title: "Assignment 1"
+title: "Assignment 1 - Data Analysis and Visualization of Singapore HDB Resale Flats and Analysis of Singapore's Landscape Pattern"
 author: "Li Yuanhao"
 date: "2026-09-28"
-output: html_document
+output:
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -29,16 +30,22 @@ library(ggtext)
 First, load the dataset of Resale Flats:
 
 ```{r}
-Resale_Price_2017 <- read_csv("data/ResaleFlatPrices/Resale flat prices based on registration date from Jan-2017 onwards.csv")
+Resale_Price_2017 <- read_csv(
+  "data/ResaleFlatPrices/Resale flat prices from Jan-2017 onwards.csv"
+  )
 ```
 
-## Understanding the dataset
+## Understanding the Dataset
 
-Let's have a quick check about the dataset:
+Let's take a quick look at the dataset.
 
 ```{r}
 head(Resale_Price_2017)
 ```
+
+This dataset contains a total of 11 columns; among them, only the flat area, lease commencement date, and resale price are stored in numerical format.
+
+## Basic Data Analysis of the HDB Flats Resale Price
 
 The news said, "...the total number of million-dollar HDB flats to 261 for the whole of 2021, more than three times the 82 such flats in 2020."
 
@@ -52,7 +59,9 @@ Resale_Price_2017 %>%
   select(month, month_dbl, everything()) -> Resale_Price_2017
 ```
 
-And then select the HDB flats sold in 2020 & 2021 & 2025 which are more than $1m:
+We have now obtained time data stored in a numeric format. Its format is "YYYYMM".
+
+Then select the HDB flats sold in 2020 & 2021 & 2025 which are more than S$1M:
 
 ```{r}
 Resale_Price_2017 %>%
@@ -74,9 +83,9 @@ Resale_Price_2017 %>%
   filter(resale_price >= 1000000) -> Resale_Price_2025
 length(Resale_Price_2025$resale_price)
 ```
-Based on the data above, the number of HDB flats sold above $1 million was 82 in 2020, 259 in 2021, and 1,593 in 2025. This indicates a significant increase in the number of high-priced HDB flats.
+Based on the data above, the number of HDB flats sold above $1 million was 82 in 2020, 259 in 2021, and 1,593 in 2025. This indicates a significant increase in the number of high-priced HDB flats. This figure differs slightly from the data reported by *The Straits Times*: the 2020 figure is the same, but the 2021 figure is lower by 2.
 
-Now calculate the growth rate between average price of 2020 & 2021:
+Calculate the growth rate of housing prices in December 2025 compared to November 2025:
 
 ```{r}
 Resale_Price_2017 %>%
@@ -88,19 +97,22 @@ Resale_Price_2017 %>%
   summarise(average_price = mean(resale_price)) %>%
   pull(average_price) -> mean_2025_Nov
 growth_rate_1month <- (mean_2025_Dec - mean_2025_Nov) / mean_2025_Nov
-cat("The growth rate of HDB resale transaction prices from Nov. to Dec. 2025 is:", round(growth_rate_1month * 100, 2), "%\n")
+cat("The growth rate of HDB resale transaction prices 
+    from Nov. to Dec. 2025 is:", 
+    round(growth_rate_1month * 100, 2), "%\n")
 ```
-
 Next, let's compare the resale prices of HDB flats between December 2025 and December 2024:
+
 ```{r}
 Resale_Price_2017 %>%
   filter(month_dbl == 202412) %>%
   summarise(average_price = mean(resale_price)) %>%
   pull(average_price) -> mean_2024_Dec
 growth_rate_1year <- (mean_2025_Dec - mean_2024_Dec) / mean_2024_Dec
-cat("The growth rate of HDB resale transaction prices from Dec. 2024 to Dec. 2025 is:", round(growth_rate_1year * 100, 2), "%\n")
+cat("The growth rate of HDB resale transaction prices 
+    from Dec. 2024 to Dec. 2025 is:", 
+    round(growth_rate_1year * 100, 2), "%\n")
 ```
-
 Then, how many flats are sold in Dec. 2025:
 
 ```{r}
@@ -111,7 +123,11 @@ Resale_Price_2017 %>%
 
 The number of HDB transactions in December 2025 was 2,024.
 
-## Visualize the dataset.
+## Visualize the Dataset
+
+### Visualization of HDB Resale Flat Transaction Volumes in 2025
+
+Generally speaking, changes in housing prices and sales volumes over time are of interest both to prospective homebuyers and to investors looking at market trends. Consequently, finding a way to visualize the evolution of average housing prices over time serves as a crucial metric for assessment.
 
 So, what is the monthly volume of HDB transactions in 2025?
 
@@ -152,6 +168,14 @@ Resale_Price_2017 %>%
         plot.margin = margin(t = 1, r = 2, b = 1, l = 2, unit = "pt"))
 ```
 
+In this chart, to better align with readers' viewing habits, I placed time on the vertical axis and the quantity sold on the horizontal axis. Furthermore, since implementing an interactive display was not feasible, I opted to use the "filling" area to convey richer information; specifically, I used it to visualize the resale prices of HDB flats.
+
+This chart clearly shows that the transaction volume was highest in July 2025 and lowest in October 2025, while the average transaction price was highest in September 2025.
+
+### Visualization of Average Transaction Prices for Resale HDB Flats (2024–2025)
+
+The next logical point to consider is the price trend of resale HDB flats over the past two years. This reflects the average movement of selling prices, allowing for an understanding of market conditions and enabling some degree of future forecasting.
+
 ```{r}
 Resale_Price_2017 %>%
   filter(month_dbl >= 202312 & month_dbl <= 202512) %>%
@@ -163,7 +187,13 @@ Resale_Price_2017 %>%
   mutate(growth_status = ifelse(growth_rate > 0, 'Increase', 'Decrease')) %>%
   filter(month >= '2024-01') %>%
   ggplot(mapping = aes(x = month_date, y = avg_price, group = 1)) +
-  geom_line(colour = 'grey70', size = 0.5) +
+  geom_smooth(
+    linewidth = 0.6,
+    alpha = 0.6,
+    color = "#548686",
+    span = 0.7
+  ) +
+  geom_line(colour = 'grey30', size = 0.5) +
   geom_point(mapping = aes(color = growth_status), size = 3) +
   scale_color_manual(
     values = c("Increase" = "#548686", "Decrease" = "#b35e5e")
@@ -193,6 +223,14 @@ Resale_Price_2017 %>%
         )
 ```
 
+As shown in the chart, although there were brief dips in average housing prices since the start of 2024, the overall trend has been one of **continuous increase**. By the end of 2025, the average housing price had risen by approximately *S$80,000*.
+
+### Visualization of the Impact of Remaining Lease Tenure on HDB Flats Resale Prices
+
+In Singapore, HDB flats have a fixed lease term, and ultimate ownership rests with the government; consequently, the remaining lease duration is a key concern for buyers in the resale market. There is a prevailing view among academics and homebuyers that prices will **"plummet"** once the remaining lease falls below a certain threshold (such as 70 or 60 years).
+
+Therefore, I selected the **"4-room"** HDB flat (the most common and mainstream type of unit sold) to examine the relationship between transaction price and the remaining lease tenure, and to conduct a regression analysis.
+
 ```{r}
 mature_towns <- c("ANG MO KIO", "BEDOK", "BISHAN", "BUKIT MERAH", 
                   "BUKIT TIMAH", "CENTRAL AREA", "CLEMENTI", "GEYLANG", 
@@ -203,10 +241,14 @@ Resale_Price_2017 %>%
   filter(flat_type == '4 ROOM') %>%
   mutate(
     lease_years = as.numeric(substr(remaining_lease, 1, 2)),
-    estate_type = ifelse(town %in% mature_towns, 'Mature Estate', 'Non-Mature Estate')
+    estate_type = ifelse(town %in% mature_towns, 'Mature Estate',
+                         'Non-Mature Estate')
     ) %>%
   filter(!is.na(lease_years)) %>%
-  ggplot(mapping = aes(x = lease_years, y = resale_price, colour = estate_type, fill = estate_type)) +
+  ggplot(mapping = aes(x = lease_years, 
+                       y = resale_price, 
+                       colour = estate_type, 
+                       fill = estate_type)) +
   geom_jitter(
     mapping = aes(color = estate_type), 
     alpha = 0.2, 
@@ -216,8 +258,10 @@ Resale_Price_2017 %>%
   geom_smooth(method = 'gam',
               formula = y ~ s(x, bs = 'cs'),
               size = 1, alpha = 0.3) +
-  scale_color_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
-  scale_fill_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
+  scale_color_manual(values = c('Mature Estate' = '#b35e5e', 
+                                'Non-Mature Estate' = '#548686')) +
+  scale_fill_manual(values = c('Mature Estate' = '#b35e5e', 
+                               'Non-Mature Estate' = '#548686')) +
   scale_x_continuous(breaks = seq(40, 100, by = 5)) +
   scale_y_continuous(labels = label_dollar(prefix = 'S$')) +
   theme_pander(
@@ -227,7 +271,8 @@ Resale_Price_2017 %>%
   labs(
     title = paste("Lease Decay Effect Controlled by Spatial Location",
                   "4-Room HDB Resale Prices (2025)", sep = "\n"),
-    subtitle = "Separating mature and non-mature estates reveals the true price depreciation curve",
+    subtitle = "Separating mature and non-mature estates 
+    reveals the true price depreciation curve",
     caption = "Data: HDB (2026)",
     x = "Remaining Lease (Years)",
     y = 'Resale Price',
@@ -243,7 +288,19 @@ Resale_Price_2017 %>%
   )
 ```
 
+In this graph, I distinguish between two categories of HDB flats based on location, as housing prices vary significantly across different urban zones. Here, I classify the towns into two groups—**"Mature Estates"** & **"Non-Mature Estates"**—following Singapore's official definitions, and compare the relationship between their remaining lease tenure and selling price.
 
+The results indicate that selling prices in areas closer to the city center are significantly higher than those in non-mature estates. Furthermore, transaction prices in mature estates show a *distinct inflection* point when the remaining lease is around 80 years. It is hypothesized that when the remaining lease falls below 80 years, buyers tend to perceive a marked decline in the property's value. While this trend is also observed in non-mature estate HDB flats, the shift is less pronounced than in mature estates.
+
+It is worth noting that in China, residential land leases typically span 70 years; this bears some resemblance to the trend shown in the chart—where a significant drop in value occurs when the remaining lease is between 70 and 80 years. This suggests that most buyers view the usable lifespan of a home as approximately **70 years**, with value perceptions shifting noticeably once the remaining tenure falls below that mark.
+
+Additionally, the confidence interval widens significantly when the remaining lease is between 40 and 50 years. Transactions for 4-room HDB flats with less than 45 years of remaining lease are extremely rare in the market; the resulting small sample size means the data lacks statistical significance in this range.
+
+### Visualization of Spatial Differentiation Patterns and Growth Rate in the Real Estate Markets of Singapore's HDB Towns
+
+For the final point of analysis, I wanted to examine the variations in HDB resale prices across different towns. By incorporating price growth rates into the visualization, I could capture the landscape of Singapore's housing market from multiple dimensions.
+
+I ultimately chose a **four-dimensional bubble scatter plot**. This chart allows the various towns to be categorized into four distinct types: *high price/high growth (top-right)*, *low price/high growth (top-left)*, *low price/low growth (bottom-left)*, and *high price/low growth (bottom-right)*. The position and size of the data points provide an intuitive overview of the current housing market conditions in each area.
 
 ```{r}
 Resale_Price_2017 %>%
@@ -262,7 +319,8 @@ Resale_Price_2017 %>%
 df_24_25 <- inner_join(df_24, df_25, by = 'town') %>%
   mutate(
     growth_rate = (price_25 - price_24) / price_24,
-    estate_type = ifelse(town %in% mature_towns, 'Mature Estate', 'Non-Mature Estate')
+    estate_type = ifelse(town %in% mature_towns,
+                         'Mature Estate', 'Non-Mature Estate')
   )
 
 global_avg_price <- mean(df_24_25$price_25)
@@ -303,8 +361,10 @@ ggplot(data = df_24_25, mapping = aes(x = price_25, y = growth_rate)) +
     max.overlaps = 50, 
     show.legend = F
   ) +
-  scale_fill_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
-  scale_color_manual(values = c('Mature Estate' = '#b35e5e', 'Non-Mature Estate' = '#548686')) +
+  scale_fill_manual(values = c('Mature Estate' = '#b35e5e', 
+                               'Non-Mature Estate' = '#548686')) +
+  scale_color_manual(values = c('Mature Estate' = '#b35e5e', 
+                                'Non-Mature Estate' = '#548686')) +
   scale_size_continuous(range = c(2.5, 11), guide = 'none') +
   scale_x_continuous(labels = label_dollar(prefix = 'S$')) +
   scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
@@ -314,7 +374,8 @@ ggplot(data = df_24_25, mapping = aes(x = price_25, y = growth_rate)) +
   ) +
   labs(
     title = paste("Market Momentum & Spatial Divergence Across HDB Towns"),
-    subtitle = "Size of bubble represents 2025 transaction volume. Dashed lines indicate national averages.",
+    subtitle = "Size of bubble represents 2025 transaction volume. 
+    Dashed lines indicate national averages.",
     caption = "Data: HDB (2026)",
     x = 'Average Resale Price (2025)',
     y = 'Year-over-Year Growth Rate (24-25)',
@@ -329,7 +390,32 @@ ggplot(data = df_24_25, mapping = aes(x = price_25, y = growth_rate)) +
   )
 ```
 
-# Try to reproduce the chart.
+In this chart, the X-axis represents the average resale prices of various towns in 2025; the further to the right a town is positioned, the higher its average housing price. The Y-axis reflects the year-on-year growth rate from 2024 to 2025; a higher position indicates stronger upward momentum in housing prices. The dashed line represents the dataset's average value.
+
+Additionally, I have retained the distinction between **"Mature Estates"** and **"Non-Mature Estates"** from the previous chart to compare development differences between these town types.
+
+As previously mentioned, the high-price, high-growth zone in the top-right corner includes towns such as *Queenstown*, *Toa Payoh*, and *Clementi*. These are **mature areas** with well-established infrastructure, resulting in high transaction volumes and high price points. In contrast, *Bukit Timah* and the *Central Area* exhibit extremely high prices but are represented by small data points, indicating very low transaction volumes; this suggests that excessive pricing has likely constrained market activity.
+
+The low-price, high-growth zone in the top-left corner features average selling prices below the overall mean but demonstrates rapid growth, indicating significant investment potential.
+
+The low-price, low-growth zone in the bottom-left corner is characterized by relatively affordable housing and modest price appreciation. This area sees the highest density of transactions among ordinary residents; the largest data points are concentrated here, predominantly representing **Non-Mature Estates**. Notably, *Geylang* shows almost zero growth, making it an outlier in the overall market landscape.
+
+The high-price, low-growth zone in the bottom-right corner represents a market segment where prices have already reached high levels; consequently, prices have stabilized and transaction volumes are moderate, accounting for a relatively small share of the market.
+
+The chart reveals a clear **spatial and hierarchical** stratification within Singapore's HDB resale market: Mature Estates generally appear in the upper-right section, while Non-Mature Estates appear in the lower-left section. Furthermore, the vast majority of HDB transactions fall within the **500,000 to 600,000** price range, forming the foundational structure of the real estate sector.
+
+## Conclusion
+
+Overall, housing prices in Singapore continue to **trend upwards**, with prices in mature estates generally higher than those in non-mature estates. When purchasing a home, buyers consider factors beyond just the price—such as the **remaining lease tenure** and the property's location—so these elements should be factored into any assessment of price trends and market conditions.
+
+However, the datasets and analytical perspectives involved are subject to certain **biases**; for instance, HDB records only the prices of successfully sold flats, excluding those currently on the market, meaning the data reflects only a portion of the market landscape. Furthermore, when categorizing and discussing individual towns, the significant disparities in total HDB stock and market size mean that relying on absolute figures fails to provide a complete picture; for example, areas like Bukit Timah or the Central Area have a limited number of HDB flats, which naturally results in lower transaction volumes.
+
+\newpage
+# Part 2 - Chart Reproduction
+
+## Reproduce the Ridgeline Plot
+
+In this section, I attempt to recreate this ridge plot, which illustrates the sales of 4-room HDB flats across different towns.
 
 ```{r fig.height=10, fig.width=8}
 df_ridges <- Resale_Price_2017 %>%
@@ -342,7 +428,9 @@ df_ridges <- Resale_Price_2017 %>%
     town_label = fct_reorder(town_label, price_per_sqm, median) %>% fct_rev()
   )
 
-ggplot(data = df_ridges, aes(x = price_per_sqm, y = town_label, fill = after_stat(x))) +
+ggplot(data = df_ridges, 
+       aes(x = price_per_sqm, y = town_label, fill = after_stat(x))
+       ) +
   geom_density_ridges_gradient(
     scale = 2.5,
     rel_min_height = 0.01,
@@ -373,8 +461,18 @@ ggplot(data = df_ridges, aes(x = price_per_sqm, y = town_label, fill = after_sta
     plot.caption = element_text(hjust = 1, color = 'black', size = 9),
     plot.margin = margin(t = 15, r = 20, b = 15, l = 10)
   )
-ggsave("HDB_ridgeline_plot.png", width = 8, height = 12, dpi = 300)
 ```
+
+A few aspects of this process are worth highlighting:
+
+- Converting town names from all-caps to title case using `str_to_title(town)`
+- Ordering the towns by price per square meter using `fct_reorder(town_label, price_per_sqm, median)` combined with `fct_rev()` to reverse the order, ensuring the least expensive areas appear at the top
+- Using the continuous color scale `scale_fill_viridis_c` (rather than the discrete `scale_fill_viridis_d`) because the value mapped to `fill = after_stat(x)`—represents continuous numerical data
+- Controlling the degree of overlap between the ridges using `scale = 2.5`, and trimming the long-tail data at the ends using `rel_min_height = 0.01`
+
+## Reproduce the Dumbbell Plot & Hollow Ridgeline Plot
+
+In this section, I attempt to recreate these 2 plot, they show similar things.
 
 ```{r}
 df_compare_base <- Resale_Price_2017 %>%
@@ -390,7 +488,9 @@ df_compare_base <- Resale_Price_2017 %>%
 df_dumbbell <- df_compare_base %>%
   group_by(town_label, year_fct) %>%
   summarise(mean_price = mean(price_per_sqm), .groups = 'drop') %>%
-  pivot_wider(names_from = year_fct, values_from = mean_price, names_prefix = 'yr_') %>%
+  pivot_wider(names_from = year_fct, 
+              values_from = mean_price, 
+              names_prefix = 'yr_') %>%
   mutate(town_label = fct_reorder(town_label, yr_2021) %>% fct_rev())
 
 df_compare_base$town_label <- factor(df_compare_base$town_label,
@@ -399,6 +499,12 @@ df_compare_base$town_label <- factor(df_compare_base$town_label,
 color_2021 <- "#7CB5EC"
 color_2026 <- "#1F77B4"
 ```
+
+At this stage, the `factor` type is used to fix the variable values. Here, `.groups = "drop"` means that after calculating the summary data, all grouping structures are completely removed, resulting in a data frame without any grouping attributes. This allows for a fresh comparison between the years 2021 and 2026.
+
+Additionally, the `factor()` function is used to sort the location names in the source data to match the target chart, ensuring that the Y-axis order is identical across both charts. And `pivot_wider` uses to increase the number of columns and decrease the number of rows.
+
+The next step is to create the plot.
 
 ```{r fig.height=10, fig.width=8}
 ggplot(df_dumbbell) +
@@ -434,7 +540,13 @@ ggplot(df_dumbbell) +
   )
 ```
 
-```{r fig.height=10, fig.width=8}
+This plot is constructed from two points representing different years and a connecting line between them, rather than being generated with a single command.
+
+Additionally, I attempted to change the font color of "2021" and "2026" in the title but was unsuccessful. This requires using `ggtext` and switching to HTML syntax. Although I later found a way to modify the text, I did not update the code here.
+
+Next, I will create a hollow ridgeline plot.
+
+```{r fig.height=8, fig.width=6.5}
 ggplot(
   df_compare_base, 
   aes(x = price_per_sqm, y = town_label, color = year_fct)
@@ -444,10 +556,10 @@ ggplot(
     scale = 1.5,       
     size = 0.6,        
     rel_min_height = 0,
-    adjust = 1.3
   ) +
   scale_color_manual(values = c('2021' = color_2021, '2026' = color_2026)) +
-  scale_x_continuous(breaks = c(4000, 8000, 12000, 16000), limits = c(2000, 16500)) +
+  scale_x_continuous(breaks = c(4000, 8000, 12000, 16000), 
+                     limits = c(2000, 16500)) +
   theme_minimal(base_size = 12) +
   labs(
     title = paste0('Comparison of HDB resale prices (4 room) between ',
@@ -468,7 +580,330 @@ ggplot(
   )
 ```
 
-# Some data I am intrested to:
+Here, the ridgeline plot is converted into an outlined (hollow) version by setting `fill = "transparent"`, while `scale_x_continuous(breaks = c(4000, 8000, 12000, 16000), limits = c(2000, 16500))` is used to constrain the x-axis range and display only specific values.
+
+Previously, attempting to truncate the data using `rel_min_height = 0.005` caused the curves to break in the middle; therefore, I still use`rel_min_height = 0` here.
+
+\newpage
+# Independent Exploration: The Distribution of Singapore's Recreational Landscape
+
+In the field of landscape architecture, analyzing the extent of green space and areas available for public recreation within each district is a critical issue. Such analysis reveals whether a district provides sufficient green space for public leisure and reflects the balance of development across different districts.
+
+Moreover, this line of inquiry serves as a foundation for research into green space equity. Therefore, the first step involves extracting "Recreation Areas" from the Singapore Master Plan using ArcGIS and calculating their surface areas (in square meters) based on the geometry, thereby establishing the baseline data for subsequent processing.
+
+Since the URA provides data for the SG **Master Plan 2019 Land Use layer** and **the Master Plan 2019 Planning Area Boundary** on the https://data.gov.sg/ website, I will conduct my data analysis based on this data.
+
+Since this dataset does not include the area of each block, I still need to perform preliminary calculations in GIS. I also link the two datasets within GIS, overlaying the planning area data onto the land-use data.
+
+```{r arcgis-map, fig.cap="Spatial Distribution of Open Spaces in Singapore (Data: URA Master Plan)", out.width="90%", fig.align='center'}
+knitr::include_graphics('OpenSpaceSG.pdf')
+```
+
+This is the image I exported from GIS, along with the pre-processed attribute table.
+
+Next step: Import the data table for Singapore's recreational spaces.
+
+```{r}
+RecreationArea <- read_csv("data/OpenSpace/RecreationData.csv")
+```
+
+```{r}
+head(RecreationArea)
+```
+
+This dataset comprises 17 columns and over 3,400 entries; notably, some columns contain almost exclusively `NA` values. Since the columns `LU_DESC, PLN_AREA_N, REGION_N, and Area` are the most frequently used, it is necessary to check them for missing values or specific, unprocessed entries.
+
+```{r}
+unique(RecreationArea$LU_DESC)
+unique(RecreationArea$PLN_AREA_N)
+unique(RecreationArea$REGION_N)
+summary(RecreationArea$Area)
+```
+
+The data does not appear to have any major issues, so the subsequent data analysis process can proceed.
+
+## Spatial Distribution by Town and Quality Distribution of Green Spaces
+
+The issue of equity in green space provision is frequently discussed; it entails that the distribution of green spaces requires not merely a balanced **spatial allocation** in terms of total area, but also a **balance in quality**. Taking Singapore as an example, HDB estates are often surrounded by lawns or open spaces; however, these differ vastly—in terms of "recreational quality" and "ecosystem services"—from fully equipped parks or nature reserves that offer immersive natural experiences.
+
+It is worth noting that the URA Master Plan does not include a specific `"Nature Reserve"` category; instead, protected areas such as the Central Catchment Area are classified as `"Open Space."` Consequently, land uses categorized as `"Open Space," "Waterbody," and "Beach Area"` are treated here as **high-quality land**, whereas `"Sports & Recreation" and "Park"` are regarded as **lower-quality recreational spaces**.
+
+```{r fig.height=10, fig.width=8}
+RecreationArea %>%
+  filter(!is.na(PLN_AREA_N)) %>%
+  group_by(PLN_AREA_N, LU_DESC) %>%
+  summarise(type_area = sum(Area, na.rm = T), .groups = 'drop') %>%
+  group_by(PLN_AREA_N) %>%
+  mutate(
+    town_total_area = sum(type_area),
+    pct_area = type_area / town_total_area
+  ) %>%
+  ungroup() %>%
+  filter(town_total_area > 10000) -> Recreation_by_town
+
+Recreation_by_town %>%
+  filter(LU_DESC %in% c('OPEN SPACE', 'WATERBODY', 'BEACH AREA')) %>%
+  group_by(PLN_AREA_N) %>%
+  summarise(hq_pct = sum(pct_area)) %>%
+  arrange(hq_pct) %>%
+  pull(PLN_AREA_N) -> Recreation_QOrder
+
+Recreation_by_town$PLN_AREA_N <- factor(Recreation_by_town$PLN_AREA_N, 
+                                        levels = Recreation_QOrder)
+
+Recreation_by_town$LU_DESC <- factor(
+  Recreation_by_town$LU_DESC,
+  levels = c('OPEN SPACE', 'WATERBODY', 'BEACH AREA', 
+             'PARK', 'SPORTS & RECREATION')
+)
+
+LU_color <- c(
+  'PARK' = '#618764',
+  'WATERBODY' = '#66A3BF',
+  'BEACH AREA' = '#FCE59A',
+  'OPEN SPACE' = '#2B5748',
+  'SPORTS & RECREATION' = '#9CB080'
+)
+
+ggplot(data = Recreation_by_town, 
+       aes(x = pct_area, y = PLN_AREA_N, fill = LU_DESC)) +
+  geom_col(width = 0.8, color = 'white', size = 0.1) +
+  scale_fill_manual(values = LU_color) +
+  scale_x_continuous(labels = percent_format(), expand = c(0,0)) +
+  labs(
+    title = 'Quality vs. Quantity: Structural Inequality in Green Space',
+    subtitle = 'Towns at the bottom heavily rely on informal 
+    <span style="color: #2B5748;">**Open Space**</span>, 
+    lacking high-tier parks',
+    caption = 'Urban Redevelopment Authority, Singapore, 2019',
+    x = 'Proportion of Recreational Area',
+    y = NULL,
+    fill = 'Recreation Type'
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = 'bottom',
+    legend.title = element_text(face = 'bold'),
+    legend.title.position = 'top',
+    panel.grid.major.y = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(size = 7, color = "gray20"),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    plot.title = element_text(face = 'bold', size = 15),
+    plot.subtitle = element_markdown(color = 'gray40', margin = margin(b = 15)),
+    plot.margin = margin(10, 20, 10, 10)
+  )
+```
+
+This chart is a **100% stacked bar chart**; rather than accounting for absolute differences in total area across districts, it focuses on the proportional relationships of their internal composition. The aim is to identify and potentially exclude "low-yield green spaces"—areas that are large in size but offer low utility.
+
+The results show that the districts ranking highest (i.e., those with a greater proportion of high-quality green space) are typically situated within nature reserves or encompass extensive marine areas. However, the fact that *Pioneer* and *Simpang* appear to consist entirely of "beach area" (100%) clearly indicates a flaw in the data. This anomaly arises because the current quality classification system is **overly simplistic**, allowing areas with uniform characteristics to receive high ratings. Furthermore, hard-to-access locations—such as the Western Islands—should arguably be excluded from the evaluation list.
+
+Future refinements to the evaluation criteria could incorporate factors such as **green space area, patch shape, accessibility, and connectivity.**
+
+## Analysis of Accessible Urban Green Spaces for Daily Use After Excluding "Giant Natural Patches"
+
+From a statistical perspective, a "mega-patch" spanning several thousand hectares can severely distort the mean value. In studies of landscape equity, it is essential to reveal how such extreme outliers—such as *central catchment area*—mask the overall data, thereby uncovering the true scale distribution of everyday community green spaces.
+
+Due to the vast area of the nature reserves, I need a logarithmic transformation to the X-axis (Area).
+
+```{r fig.height=6, fig.width=10}
+RecreationArea %>%
+  filter(!is.na(REGION_N)) %>%
+  filter(Area > 0) %>%
+  mutate(
+    REGION_N = fct_reorder(REGION_N, Area, median) %>% fct_rev()
+  ) -> Recreation_ridge
+
+Recreation_ridge_label <- Recreation_ridge %>%
+  group_by(REGION_N) %>%
+  summarise(med_area = median(Area, na.rm = T)) %>%
+  mutate(
+    label_text = ifelse(med_area >= 10000, 
+                        paste0('Median: ', round(med_area / 10000, 2), ' ha'),
+                        paste0('Median: ', round(med_area), ' sqm'))
+  )
+
+ggplot(data = Recreation_ridge, aes(x = Area, y = REGION_N, fill = REGION_N)) +
+  geom_density_ridges2(
+    scale = 1.3,
+    rel_min_height = 0,
+    adjust = 1.3,
+    alpha = 0.7,
+    color = 'white',
+    linewidth = 0.8,
+    #========================
+    jittered_points = T,
+    position = position_points_jitter(width = 0.02, height = 0.05), 
+    point_shape = 21,
+    point_size = 1.5,
+    point_fill = 'white',
+    point_alpha = 0.2,
+    point_stroke = 0.6,
+    #========================
+    quantile_lines = T,
+    quantiles = 4,
+    vline_width = 0.4,
+    vline_colour = 'white',
+    vline_linetype = 'dashed',
+  ) +
+  geom_text(
+    data = Recreation_ridge_label,
+    aes(x = med_area, y = REGION_N, label = label_text),
+    inherit.aes = F,
+    nudge_y = 0.55,          
+    nudge_x = 0.05,           
+    hjust = 0,                
+    color = "#1A312C",
+    size = 3.5,
+    alpha = 0.8
+  ) +
+  scale_x_log10(
+    breaks = c(100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c('100sqm', '1K', '10K(1ha)', '100K', '1M', '10M'),
+  ) +
+  scale_fill_viridis_d(option = 'viridis', direction = -1) +
+  labs(
+    title = 'The True Baseline of Everyday Urban Green Spaces',
+    subtitle = 'Logarithmic scale reveals the median patch size 
+    (vertical lines), mitigating the distortion of mega-reserves.',
+    caption = 'Urban Redevelopment Authority, Singapore, 2019',
+    x = 'Patch Area (sqm, Log10 Scale)',
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none", 
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_line(color = "grey80", linetype = 'dashed'),
+    axis.text.y = element_text(size = 11, face = 'bold', color = 'gray20'),
+    axis.text.x = element_text(size = 9, color = 'gray20'),
+    plot.title = element_text(face = 'bold', size = 15),
+    plot.subtitle = element_text(color = 'gray40', margin = margin(b = 15)),
+    plot.margin = margin(10, 20, 10, 10)
+  )
+```
+
+The chart illustrates a geographic gradient. Moving down the Y-axis, the median green space area (indicated by the central vertical dashed line and numerical labels) shows an upward trend, confirming a strong correlation between land value and green space typology. In the highly dense Central area, extreme land scarcity results in a "highly fragmented" landscape; residents' daily access is largely limited to "pocket parks" or residual spaces of approximately 0.2–0.3 hectares. In contrast, in the North and West, land constraints are relatively eased, and the baseline size for standard community green spaces doubles, reaching the 0.5–0.6 hectare scale typical of community parks.
+
+The North-East region is dominated by high-density modern public housing estates (such as *Punggol* and *Sengkang*). Green spaces here are predominantly amenity parks planned by the URA and NParks using standardized templates, resulting in highly uniform sizes. Conversely, the Central Region—being an older urban area—features green spaces that emerged organically within available pockets over time, leading to significant variation in size and high statistical variance.
+
+However, this chart accounts only for **absolute area**, treating all green spaces as equivalent. Current research on green space quality lacks analytical methods that address **complex 3D spatial** structures. Furthermore, the spatial scope of the current analysis is somewhat too broad, making it difficult to accurately assess the specific characteristics of individual locations. Significant variations also exist **within these regions,** suggesting that the scope of analysis should be narrowed.
+
+## A mixed analysis of the ratio of blue-green space infrastructure and the equity of inter-regional resource distribution.
+
+By integrating **"Blue-Green Infrastructure (BGI) synergy"** with **"regional resource agglomeration,"** this study aims to evaluate the distribution of landscape resources in Singapore. It seeks to determine whether, in addition to overall quantitative inequality, there exists a structural imbalance regarding the **"balanced combination of water and green resources."**
+
+This visualization employs the BGI Synergy Matrix Scatter Plot, combining a dot plot, structural lines, and variations in bubble size and color to display multiple layers of information simultaneously.
+
+```{r}
+RecreationArea %>%
+  mutate(BGI_type = 
+    case_when(
+      LU_DESC %in% c('WATERBODY', 'BEACH AREA') ~ 'Blue',
+      LU_DESC %in% c('PARK', 'OPEN SPACE', 'SPORTS & RECREATION') ~ 'Green',
+      TRUE ~ 'Other'
+    )
+  ) %>%
+  filter(BGI_type != 'Other') %>%
+  group_by(REGION_N,PLN_AREA_N,BGI_type) %>%
+  summarise(Area_ha = sum(Area, na.rm = T) / 10000, .groups = 'drop') %>%
+  pivot_wider(
+    names_from = BGI_type,
+    values_from = Area_ha,
+    values_fill = list(Area_ha = 0)
+  ) %>%
+  mutate(Total_BGI = Blue + Green) %>%
+  filter(Total_BGI > 1) -> Recreation_synergy
+
+region_colors <- c(
+  "CENTRAL REGION" = "#e27c7c",   
+  "EAST REGION" = "#469990",      
+  "NORTH-EAST REGION" = "#915c83",
+  "NORTH REGION" = "#4363d8",     
+  "WEST REGION" = "#f58231"       
+)
+```
+
+```{r fig.height=8, fig.width=10.5, message=FALSE, warning=FALSE}
+ggplot(data = Recreation_synergy, aes(x = Green, y = Blue)) +
+  geom_abline(intercept = 0, 
+              slope = 1, 
+              linetype = 'dashed', 
+              color = 'grey60', 
+              size = 0.8) +
+  geom_point(
+    aes(size = Total_BGI, fill = REGION_N), 
+    shape = 21, 
+    color = "white", 
+    alpha = 0.75, 
+    stroke = 1) +
+  geom_text_repel(
+    aes(label = PLN_AREA_N, color = REGION_N), 
+    size = 3.2, 
+    fontface = "bold",
+    box.padding = 1, 
+    point.padding = 0.5,
+    force = 3,
+    max.overlaps = 30,
+    bg.colour = 'white',
+    min.segment.length = 0, 
+    segment.alpha = 0.6,
+    segment.size = 0.6,
+    segment.curvature = -0.2,
+    segment.angle = 90,
+    show.legend = FALSE) +
+  scale_fill_manual(values = region_colors) +
+  scale_color_manual(values = region_colors) +
+  scale_size_continuous(range = c(4, 20), guide = "none") +
+  scale_x_continuous(
+    trans = pseudo_log_trans(base = 10, sigma = 1),
+    breaks = c(0, 10, 100, 1000, 3000),
+    labels = c("0", "10 ha", "100 ha", "1K ha", "3K ha")
+    ) +
+  scale_y_continuous(
+    trans = pseudo_log_trans(base = 10, sigma = 1),
+    breaks = c(0, 10, 100, 1000, 3000),
+    labels = c("0", "10 ha", "100 ha", "1K ha", "3K ha")
+    ) +
+  labs(
+    title = 'Blue-Green Infrastructure Synergy Matrix',
+    subtitle = paste('Dashed line indicates 1:1 balance. 
+                     Bubble size represents total resource agglomeration.',
+                     'BGI Area in Hectares (Pseudo-Log Scale)',
+                     sep = '\n'),
+    caption = 'Urban Redevelopment Authority, Singapore, 2019',
+    x = 'Green Infrastructure Area (Park, Open Space, Sports & Recreation)',
+    y = 'Blue Infrastructure Area (Waterbody, Beach Area)',
+    fill = 'Planning Area'
+  ) +
+  theme_minimal(base_size = 12) +
+  guides(
+    fill = guide_legend(override.aes = list(size = 5)) 
+  )            #https://comate.baidu.com/zh/page/zya5ecdtlws
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    legend.key.size = unit(21, 'pt'),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "grey90", fill = NA, size = 1),
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(color = "gray40", margin = margin(b = 15)),
+    plot.margin = margin(10, 20, 10, 10)
+  )
+```  
+
+The chart reveals an imbalance in the distribution of resources across certain areas—such as *Mandai*, *Woodlands*, *Bukit Merah*, and the *Western Islands*. Extending to the right along the x-axis, these areas possess **extensive green space but have negligible water surface area** (plotting near the bottom end of the logarithmic axis), typically indicating an inland location devoid of water features.
+
+Bubble size represents the total volume of BGI resources in each area. The massive bubbles for the Western Water Catchment and Central Water Catchment in the upper-right corner highlight the high degree of centralization within Singapore’s national ecological network. In contrast, areas in the *Central Region* (such as *Rochor* and *Newton*—represented by light red bubbles) appear extremely small; they not only deviate significantly from the 1:1 synergy line but also possess absolute areas of less than 10 hectares, visually illustrating the scarcity of ecological resources in the high-density urban core.
+
+However, to accommodate both 0-hectare urban zones and water catchment areas exceeding 3,000 hectares within a single chart, I use the **pseudo-logarithmic scale**. Visually, the interval between 10 and 100 hectares appears identical to the interval between 100 and 1,000 hectares. This scaling significantly downplays the stark reality of spatial inequality.
+
+Furthermore, **open sea areas** beyond the immediate shoreline were excluded from the calculations, partly because quantifying marine surface area presents significant methodological challenges.
+
+# Reflection
+
+This is my first time writing a statistical report, and I feel I may have included too much information. As a designer, I often want to display multiple dimensions of data in a single chart, but packing in so much information can reduce the plot's readability. Perhaps next time, I should scale back the content I include.
 
 
-
+I used `Gemini Pro 3` to assist with identifying suitable chart types and the coding process while completing my assignment; however, I personally determined the research direction, the factors included in the plots, and the final visual presentation of the figures.
