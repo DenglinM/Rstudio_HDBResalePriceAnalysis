@@ -1,6 +1,6 @@
 ---
 title: "Assignment 1 - Data Analysis and Visualization of Singapore HDB Resale Flats and Analysis of Singapore's Landscape Pattern"
-author: "Li Yuanhao"
+author: "DengL1n"
 date: "2026-09-28"
 output:
   pdf_document: default
